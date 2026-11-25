@@ -1,4 +1,4 @@
-const skillGroups = {
+﻿const skillGroups = {
   'Software & cloud': 'Python|JavaScript:JS,ECMAScript|TypeScript|React:React.js,ReactJS|Vue:Vue.js,VueJS|Angular|Node.js:NodeJS|Java|Kotlin|Swift|Go:Golang|Rust|C++|C#|.NET:dotnet|PHP|Ruby|HTML:HTML5|CSS:CSS3|SQL|PostgreSQL:Postgres|MySQL|MongoDB|Redis|Django|Flask|FastAPI|Spring Boot|Git|GitHub Actions|REST APIs:REST API,RESTful APIs,RESTful API|GraphQL|Docker|Kubernetes:K8s|Terraform|Ansible|Linux|AWS:Amazon Web Services|Azure:Microsoft Azure|Google Cloud:GCP,GCP Cloud|CI/CD:continuous integration and delivery|Jenkins|Agile|Scrum|Jira|Test automation:automated testing|Selenium|Playwright|Unit testing|Cybersecurity|Network administration',
   'Data & AI': 'Excel:Microsoft Excel,MS Excel|Power BI:PowerBI|Tableau|Looker|Data analysis:data analytics|Data visualization:data visualisation|Statistics:statistical analysis|Machine learning:ML|Deep learning|Natural language processing:NLP|Computer vision|PyTorch|TensorFlow|scikit-learn:sklearn|Pandas|NumPy|Apache Spark:PySpark,Apache PySpark|Airflow:Apache Airflow|dbt|Snowflake|BigQuery|ETL:data pipelines,ELT|A/B testing:AB testing,A/B tests|Forecasting|Experiment design:experimental design|R programming:R language,RStudio',
   'Design & product': 'Figma|Adobe Photoshop:Photoshop|Illustrator:Adobe Illustrator|UX design:user experience design|UI design:user interface design|User research:UX research|Usability testing|Wireframing:wireframes|Prototyping|Design systems|Accessibility:WCAG|Product management|Roadmapping:product roadmaps|Product strategy|Requirements gathering',
@@ -256,3 +256,4 @@ function compareScores(a, b) {
     || (b.fraction.required ?? 0) - (a.fraction.required ?? 0)
     || b.matched.required.length - a.matched.required.length;
 }
+

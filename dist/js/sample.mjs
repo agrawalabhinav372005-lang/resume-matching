@@ -1,4 +1,4 @@
-export const sampleResumes = [
+﻿export const sampleResumes = [
   ['Maya Chen', `Maya Chen
 Summary
 Analytics engineer turning operational data into reporting people can use.
@@ -61,3 +61,4 @@ Preferred skills: User research, Accessibility, Design systems
 Requirements:
 2 years of experience`]
 ];
+

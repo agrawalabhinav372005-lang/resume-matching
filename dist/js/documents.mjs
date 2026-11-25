@@ -1,4 +1,4 @@
-const maxBytes = 10 * 1024 * 1024;
+﻿const maxBytes = 10 * 1024 * 1024;
 export const maxCharacters = 150000;
 
 async function pdfText(buffer) {
@@ -69,3 +69,4 @@ export async function readDocument(file) {
   if (clean.length > maxCharacters) throw new Error('The document exceeds 150,000 characters.');
   return clean;
 }
+

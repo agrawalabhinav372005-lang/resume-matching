@@ -1,47 +1,107 @@
-# RESUME MATCHING
+# ResuMatch — Smart Resume Screener
 
-A browser-based résumé screening and hiring review tool. It opens with four fictional candidates and three jobs. Select **Reset workspace** to start with your own data.
+ResuMatch is a browser-based resume screening tool I built to make the initial candidate screening process faster and easier.
 
-1. Upload text-based PDF, DOCX, or UTF-8 TXT files, or paste résumé text directly.
-2. Add each job description, extract its criteria, and verify the fields before saving.
-3. Select **Run screening** and choose a role. Search by candidate name or skill, or filter by review status. Select two or three candidates to compare their scores and evidence side by side.
-4. Open **Review match** to see the score breakdown, suggested follow-up questions, and your review notes for that candidate and role. Open the candidate profile to see job recommendations and the extracted résumé text.
+Upload candidate resumes, add a job description, and get ranked results based on skills, experience, education, and qualifications. The application also highlights missing skills and suggests questions that can be useful during interviews.
 
-CSV export includes the complete ranking and review status for the selected job. Notes are only visible in the workspace session.
+The application processes documents directly in the browser, without uploading candidate data to a backend server.
 
-## Scoring
+**[Live Demo](https://agrawalabhinav372005-lang.github.io/resume-matching/)**
 
-The NLP engine uses an English skill and alias dictionary, section and credential recognition, basic negation detection, and date-range extraction. Job-specific terms can be added in the criteria editor. Overlapping employment periods are counted once. Dates with years only are treated as covering the full calendar years. When employment dates are unavailable, the engine considers an explicit years-of-experience statement. Experience is total detected duration and does not establish years in a particular skill or industry.
+## Features
 
-The default weights are 60 for required skills, 15 for preferred skills, 15 for experience, 5 for education, and 5 for qualifications. Only criteria specified for the job contribute to the denominator. Skill and credential points are proportional to evidence found. Experience points are capped at the job’s minimum. Education uses the highest detected completed degree level and does not verify subject or equivalence. Ties use required-skill coverage and count before assigning a shared rank. Job recommendations require a positive score and at least one skill match when the job has skill criteria.
+- **Resume upload:** Upload PDF, DOCX, or TXT files, or paste resume text directly.
+- **Job description analysis:** Extract skills, experience requirements, and education criteria from job descriptions.
+- **Candidate ranking:** Calculate match scores and rank candidates for a particular role.
+- **Skill analysis:** View matched skills, missing requirements, and suggested interview questions.
+- **Candidate comparison:** Compare 2–3 candidates side by side.
+- **CSV export:** Download candidate rankings for further analysis.
 
-Scores summarize evidence in the submitted text. The engine does not verify claims and has no measured hiring accuracy. Review the extracted fields and source documents before acting on scores. Image-only PDFs need OCR elsewhere or pasted text, and complex document layouts may extract out of order.
+## Scoring Method
 
-## Local use
+The matching engine uses an English skills dictionary along with role-specific terms added by the user.
 
-From this directory, run:
+It also supports common skill aliases (for example, JS → JavaScript), basic negation detection, and date range extraction from work experience.
 
-```sh
-python3 -m http.server 8000 --bind 127.0.0.1 --directory dist
+Default score weights:
+
+| Category | Weight |
+|---|---:|
+| Required skills | 60% |
+| Preferred skills | 15% |
+| Experience | 15% |
+| Education | 5% |
+| Qualifications and certifications | 5% |
+| **Total** | **100%** |
+
+The scores reflect information extracted from submitted resume text. They do not independently verify a candidate's qualifications or experience. Always review the original resume before making a hiring decision.
+
+## Running Locally
+
+Python 3 is required.
+
+```bash
+python -m http.server 8000 --bind 127.0.0.1 --directory dist
 ```
 
-Open http://127.0.0.1:8000 in a current browser. All document parsing and scoring run in the browser. No external model service, API key, database, or build step is needed. Reloading clears workspace inputs, scores, and reviews. Exported CSV files are saved by the browser.
+Open the following address in your browser:
 
-## Project layout
+`http://127.0.0.1:8000`
 
-| Path | Purpose |
-| --- | --- |
-| `dist/index.html` | Application page |
-| `dist/js/app.mjs` | Screening, comparison, and review interface |
-| `dist/js/engine.mjs` | Résumé extraction, job matching, and scoring |
-| `dist/js/documents.mjs` | PDF, DOCX, and TXT readers |
-| `dist/js/sample.mjs` | Fictional test résumés and job descriptions |
-| `dist/assets/` | Styles and favicon |
-| `dist/vendor/` | Browser dependencies and their licenses |
-| `tests/` | Matching and scoring regression tests |
+The application runs in the browser and does not require a backend server, API keys, or a build step.
 
-`dist/` is the editable application and the directory to serve. Run the tests with Node.js 20 or later.
+## Running Tests
 
-```sh
+Node.js 20 or later is required.
+
+```bash
 node --test
 ```
+
+## Project Structure
+
+```text
+resume-matching/
+├── dist/
+│   ├── index.html
+│   ├── assets/
+│   │   ├── styles.css
+│   │   └── extras.css
+│   ├── js/
+│   │   ├── app.mjs
+│   │   ├── engine.mjs
+│   │   ├── documents.mjs
+│   │   └── sample.mjs
+│   └── vendor/
+│       ├── pdfjs
+│       └── mammoth
+├── tests/
+│   └── engine.test.mjs
+├── .github/
+│   └── workflows/
+│       └── deploy.yml
+├── .gitignore
+└── README.md
+```
+
+## Technology Stack
+
+- Vanilla JavaScript
+- JavaScript ES Modules
+- PDF.js for PDF document parsing
+- Mammoth.js for DOCX document parsing
+- Node.js for running tests
+
+No frontend framework or build tools are required.
+
+## Known Limitations
+
+- **Scanned PDFs:** Image-only PDFs are not supported because the document parser extracts text layers rather than performing OCR. Resume text can be pasted manually instead.
+- **Unusual resume layouts:** Some documents may produce text in an incorrect order. Review the extracted text under "View original resume text" before evaluating a candidate.
+- **Year-only date ranges:** Dates such as 2020–2022 are treated as covering the complete calendar years.
+
+## Author
+
+**Abhinav Agrawal**
+
+[GitHub Profile](https://github.com/agrawalabhinav372005-lang)

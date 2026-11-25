@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+﻿import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {analyze, extractProfile, normalizeSkills, parseJob, scoreProfile} from '../dist/js/engine.mjs';
@@ -40,3 +40,4 @@ test('scoring uses explicit role criteria and handles overlapping jobs and missi
   assert.equal(result.score, 75);
   assert.equal(scoreProfile(profile, parseJob('Unspecified role', 'Work together.')).score, null);
 });
+

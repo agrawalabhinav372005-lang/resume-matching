@@ -1,4 +1,4 @@
-node_modules/
+﻿node_modules/
 coverage/
 .env
 .env.*
@@ -6,5 +6,5 @@ coverage/
 __pycache__/
 
 # Local hosting configuration and packaged source downloads
-.openai/
 dist/downloads/
+

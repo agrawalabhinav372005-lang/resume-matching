@@ -1,81 +1,181 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Analyze résumés, review candidate rankings, and recommend jobs.">
-  <title>RESUME MATCHING</title>
+  <meta name="description" content="Smart resume screening tool — upload resumes, define job criteria, get ranked candidates instantly.">
+  <meta name="author" content="Abhinav Agrawal">
+  <title>ResuMatch · Smart Resume Screener</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./assets/styles.css">
+  <link rel="stylesheet" href="./assets/extras.css">
   <script type="module" src="./js/app.mjs"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to main content</a>
-  <aside class="sidebar">
-    <div class="brand"><span class="brand-mark" data-icon="layers"></span><span>RESUME MATCHING<small>Hiring workspace</small></span></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <span class="brand-mark" data-icon="layers"></span>
+      <span>ResuMatch<small>by Abhinav Agrawal</small></span>
+    </div>
     <nav aria-label="Workspace">
       <a href="#screening" aria-current="page"><span data-icon="layout"></span>Screening</a>
       <a href="#candidates"><span data-icon="users"></span>Candidates</a>
-      <a href="#jobs"><span data-icon="briefcase"></span>Job descriptions</a>
+      <a href="#jobs"><span data-icon="briefcase"></span>Job Descriptions</a>
     </nav>
-    <div class="sidebar-foot"><span class="sidebar-lock" data-icon="lock"></span><span>Browser-only processing<small>Files stay in this browser</small></span></div>
+    <div class="sidebar-foot">
+      <span class="sidebar-lock" data-icon="lock"></span>
+      <span>100% Browser-based<small>Your files never leave this tab</small></span>
+    </div>
   </aside>
+
+  <!-- Main workspace -->
   <div class="workspace">
     <header class="topbar">
+      <button class="sidebar-toggle icon-button" id="sidebar-toggle" aria-label="Toggle sidebar" type="button">
+        <span data-icon="menu"></span>
+      </button>
       <span id="breadcrumb">Workspace <span class="slash">/</span> <strong>Screening</strong></span>
-      <button id="reset" class="button subtle" type="button"><span data-icon="rotate"></span>Reset workspace</button>
-    </header>
-    <main id="main" tabindex="-1">
-      <div class="heading">
-        <div><h1 id="title">Résumé screening</h1><p id="subtitle">See where each résumé fits and what to ask about in your next conversation.</p></div>
-        <button id="demo" class="button secondary" type="button"><span data-icon="flask"></span>Try sample data</button>
+      <div class="topbar-actions">
+        <button id="theme-toggle" class="icon-button" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+          <span data-icon="moon" id="theme-icon"></span>
+        </button>
+        <button id="reset" class="button subtle" type="button"><span data-icon="rotate"></span>Reset</button>
       </div>
-      <div id="summary" class="summary"></div>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <!-- Screening view -->
       <section id="screening-view" class="view" aria-label="Screening">
-        <div class="section-heading"><h2>Screening inputs</h2><span id="input-status" class="status-pill"></span></div>
+        <div class="heading">
+          <div>
+            <h1 id="title">Résumé Screening</h1>
+            <p id="subtitle">Upload résumés, add job criteria, and get instant ranked results.</p>
+          </div>
+          <button id="demo" class="button secondary" type="button"><span data-icon="flask"></span>Load Sample Data</button>
+        </div>
+
+        <div id="summary" class="summary"></div>
+
+        <div class="section-heading">
+          <h2>Screening Inputs</h2>
+          <span id="input-status" class="status-pill"></span>
+        </div>
+
         <div class="input-grid">
+          <!-- Resume upload panel -->
           <section class="panel input-panel" aria-labelledby="resume-title">
-            <div class="panel-heading"><span class="icon-box" data-icon="file-stack"></span><div><h3 id="resume-title">Candidate résumés</h3><p>Add the résumés you want to review.</p></div><button class="button subtle compact" type="button" id="paste"><span data-icon="plus"></span>Paste text</button></div>
+            <div class="panel-heading">
+              <span class="icon-box" data-icon="file-stack"></span>
+              <div>
+                <h3 id="resume-title">Candidate Résumés</h3>
+                <p>Upload PDF, DOCX, or TXT — or paste text directly.</p>
+              </div>
+              <button class="button subtle compact" type="button" id="paste"><span data-icon="plus"></span>Paste Text</button>
+            </div>
             <button class="dropzone" id="dropzone" type="button">
-              <span class="upload-icon" data-icon="upload"></span><strong>Click to upload <span>or drag and drop</span></strong><small>PDF, DOCX, or TXT · up to 10 MB per file</small>
+              <span class="upload-icon" data-icon="upload"></span>
+              <strong>Click to upload <span>or drag and drop</span></strong>
+              <small>PDF, DOCX, or TXT · up to 10 MB per file</small>
             </button>
             <input hidden id="files" type="file" multiple accept=".pdf,.docx,.txt">
             <div id="resume-preview" class="input-list"></div>
           </section>
+
+          <!-- Job description panel -->
           <section class="panel input-panel" aria-labelledby="job-title">
-            <div class="panel-heading"><span class="icon-box teal" data-icon="briefcase"></span><div><h3 id="job-title">Job descriptions</h3><p>Decide what matters for each role.</p></div><button class="button subtle compact" id="add-job" type="button"><span data-icon="plus"></span>Add job</button></div>
+            <div class="panel-heading">
+              <span class="icon-box teal" data-icon="briefcase"></span>
+              <div>
+                <h3 id="job-title">Job Descriptions</h3>
+                <p>Define what skills and experience matter for each role.</p>
+              </div>
+              <button class="button subtle compact" id="add-job" type="button"><span data-icon="plus"></span>Add Job</button>
+            </div>
             <div id="job-preview" class="job-list"></div>
           </section>
         </div>
-        <div class="run-row"><p id="run-note" role="status"></p><button id="run" class="button primary" type="button"><span data-icon="target"></span>Run screening</button></div>
+
+        <!-- Run screening -->
+        <div class="run-row">
+          <p id="run-note" role="status"></p>
+          <button id="run" class="button primary" type="button"><span data-icon="target"></span>Run Screening</button>
+        </div>
+
+        <!-- Results section -->
         <section class="results" aria-labelledby="results-title">
           <div class="section-heading results-heading">
-            <div><h2 id="results-title">Candidate rankings</h2><p>Compare résumés for the selected role and keep track of your review.</p></div>
-            <div class="result-controls"><label class="visually-hidden" for="role-select">Job to rank against</label><select id="role-select"></select><button id="export" class="button secondary" type="button"><span data-icon="download"></span>Export CSV</button></div>
+            <div>
+              <h2 id="results-title">Candidate Rankings</h2>
+              <p>Compare résumés for the selected role and track your review status.</p>
+            </div>
+            <div class="result-controls">
+              <label class="visually-hidden" for="role-select">Job to rank against</label>
+              <select id="role-select"></select>
+              <button id="export" class="button secondary" type="button"><span data-icon="download"></span>Export CSV</button>
+            </div>
           </div>
           <div id="review-toolbar" class="review-toolbar" hidden>
-            <label class="search-box"><span data-icon="search"></span><span class="visually-hidden">Search candidates</span><input type="search" id="candidate-search" placeholder="Name or skill"></label>
-            <label><span class="visually-hidden">Filter by review status</span><select id="status-filter"><option value="">All review statuses</option><option value="todo">To review</option><option value="follow-up">Follow up</option><option value="reviewed">Reviewed</option></select></label>
-            <button type="button" class="button secondary" id="compare"><span data-icon="compare"></span><span id="compare-label">Compare candidates</span></button>
+            <label class="search-box">
+              <span data-icon="search"></span>
+              <span class="visually-hidden">Search candidates</span>
+              <input type="search" id="candidate-search" placeholder="Name or skill…">
+            </label>
+            <label>
+              <span class="visually-hidden">Filter by review status</span>
+              <select id="status-filter">
+                <option value="">All statuses</option>
+                <option value="todo">To review</option>
+                <option value="follow-up">Follow up</option>
+                <option value="reviewed">Reviewed</option>
+              </select>
+            </label>
+            <button type="button" class="button secondary" id="compare">
+              <span data-icon="compare"></span>
+              <span id="compare-label">Compare Candidates</span>
+            </button>
             <p id="result-count" role="status"></p>
           </div>
           <div id="ranking" class="panel"></div>
         </section>
       </section>
+
+      <!-- Candidates view -->
       <section id="candidates-view" class="view" aria-label="Candidates" hidden>
-        <div class="section-heading"><h2>Candidate profiles</h2><button id="add-candidate-view" class="button primary" type="button"><span data-icon="plus"></span>Add résumé text</button></div>
+        <div class="section-heading">
+          <h2>Candidate Profiles</h2>
+          <button id="add-candidate-view" class="button primary" type="button"><span data-icon="plus"></span>Add Résumé</button>
+        </div>
         <div id="candidate-cards" class="cards"></div>
       </section>
+
+      <!-- Jobs view -->
       <section id="jobs-view" class="view" aria-label="Job descriptions" hidden>
-        <div class="section-heading"><h2>Role requirements</h2><button id="add-job-view" class="button primary" type="button"><span data-icon="plus"></span>Add job</button></div>
+        <div class="section-heading">
+          <h2>Role Requirements</h2>
+          <button id="add-job-view" class="button primary" type="button"><span data-icon="plus"></span>Add Job</button>
+        </div>
         <div id="job-cards" class="cards"></div>
       </section>
-      <footer>Use match scores to guide your review. Check the original résumé before making a hiring decision.</footer>
+
+      <footer>
+        Built by <a href="https://github.com/agrawalabhinav372005-lang" target="_blank" rel="noopener">Abhinav Agrawal</a> ·
+        Scores guide review — always check the original résumé before making a decision.
+      </footer>
     </main>
   </div>
+
+  <!-- Toast notification -->
   <div id="notice" role="status" aria-live="polite" hidden></div>
+
+  <!-- Dialog -->
   <dialog id="dialog" aria-labelledby="dialog-title">
-    <div class="dialog-header"><h2 id="dialog-title"></h2><button id="close" type="button" class="icon-button" aria-label="Close dialog"><span data-icon="x"></span></button></div>
+    <div class="dialog-header">
+      <h2 id="dialog-title"></h2>
+      <button id="close" type="button" class="icon-button" aria-label="Close dialog"><span data-icon="x"></span></button>
+    </div>
     <div id="dialog-body"></div>
   </dialog>
 </body>
