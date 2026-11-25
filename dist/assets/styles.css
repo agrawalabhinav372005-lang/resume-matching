@@ -1,5 +1,5 @@
 /* ============================================================
-   ResuMatch — Stylesheet
+   RESUME MATCHING — Stylesheet
    Author: Abhinav Agrawal
    ============================================================ */
 
@@ -716,8 +716,9 @@ footer a { color: var(--blue); font-weight: 650; }
 @media (max-width: 860px) {
   .sidebar {
     transform: translateX(calc(-1 * var(--sidebar-w)));
+    visibility: hidden;
   }
-  .sidebar.open { transform: translateX(0); box-shadow: var(--shadow-md); }
+  .sidebar.open { transform: translateX(0); visibility: visible; box-shadow: var(--shadow-md); }
   .workspace { margin-left: 0; }
   .sidebar-toggle { display: flex; }
   .input-grid { grid-template-columns: 1fr; }

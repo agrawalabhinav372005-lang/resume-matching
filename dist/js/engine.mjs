@@ -168,18 +168,24 @@ const jobHeaders = [
 export function parseJob(title, description) {
   const sections = {general: [], required: [], preferred: [], context: []};
   let section = 'general';
+  let inlineSection;
   for (const original of norm(description).split(/\r?\n/)) {
-    const line = original.trim().replace(/^[-•*]\s+/, '');
+    const trimmed = original.trim();
+    const bullet = /^[-•*]\s+/.test(trimmed);
+    const line = trimmed.replace(/^[-•*]\s+/, '');
+    if (!bullet) inlineSection = undefined;
     if (!line) continue;
     const header = jobHeaders.find(([, pattern]) => pattern.test(line));
     if (header) {
-      section = header[0];
+      const category = header[0];
       const content = line.replace(header[1], '');
-      if (content) sections[section].push(content);
+      if (content) sections[category].push(content);
+      if (!content || category === 'context') section = category;
+      else inlineSection = category;
     } else if (/\b(?:preferred|nice to have|a plus|desirable|optional)\b/i.test(line)) {
       sections.preferred.push(line);
     } else {
-      sections[section].push(line);
+      sections[inlineSection ?? section].push(line);
     }
   }
   const required = [...sections.required, ...sections.general];
@@ -189,7 +195,8 @@ export function parseJob(title, description) {
   const explicitlyRequired = new Set(skillsIn(sections.required));
   return {
     title, description, requiredSkills: skillsIn(required).filter(skill => !preferredSkills.includes(skill) || explicitlyRequired.has(skill)),
-    preferredSkills, years: years.length ? Math.max(...years) : 0,
+    preferredSkills: preferredSkills.filter(skill => !explicitlyRequired.has(skill)),
+    years: years.length ? Math.max(...years) : 0,
     degree: degree?.label ?? '',
     certificates: credentials.filter(([, pattern]) => required.some(line => pattern.test(line))).map(([label]) => label)
   };

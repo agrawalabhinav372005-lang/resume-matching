@@ -41,3 +41,29 @@ test('scoring uses explicit role criteria and handles overlapping jobs and missi
   assert.equal(scoreProfile(profile, parseJob('Unspecified role', 'Work together.')).score, null);
 });
 
+test('inline preferred skills do not capture later minimum requirements', () => {
+  const job = parseJob('Analyst', [
+    'Required skills: SQL',
+    'Preferred skills: Tableau, SQL',
+    '- Excel',
+    '3 years of experience',
+    'Bachelor’s degree'
+  ].join('\n'));
+
+  assert.deepEqual(job.requiredSkills, ['SQL']);
+  assert.deepEqual(job.preferredSkills, ['Excel', 'Tableau']);
+  assert.equal(job.years, 3);
+  assert.equal(job.degree, 'Bachelor’s');
+});
+
+test('standalone sections classify bullets and exclude benefits from criteria', () => {
+  const job = parseJob('Designer', [
+    'Requirements', '- Figma', 'Preferred skills', '- User research',
+    'Benefits: Professional development', '- 10 years of professional development funding'
+  ].join('\n'));
+
+  assert.deepEqual(job.requiredSkills, ['Figma']);
+  assert.deepEqual(job.preferredSkills, ['User research']);
+  assert.equal(job.years, 0);
+});
+

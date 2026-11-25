@@ -1,12 +1,14 @@
-# ResuMatch — Smart Resume Screener
+# RESUME MATCHING
 
-ResuMatch is a browser-based resume screening tool I built to make the initial candidate screening process faster and easier.
+RESUME MATCHING is a browser-based tool for reviewing resumes against job requirements.
 
 Upload candidate resumes, add a job description, and get ranked results based on skills, experience, education, and qualifications. The application also highlights missing skills and suggests questions that can be useful during interviews.
 
 The application processes documents directly in the browser, without uploading candidate data to a backend server.
 
 **[Live Demo](https://agrawalabhinav372005-lang.github.io/resume-matching/)**
+
+The demo opens with fictional candidates and jobs. Try changing the selected role or comparing two candidates. Select **Reset** to start with your own resumes and job descriptions.
 
 ## Features
 
@@ -15,6 +17,7 @@ The application processes documents directly in the browser, without uploading c
 - **Candidate ranking:** Calculate match scores and rank candidates for a particular role.
 - **Skill analysis:** View matched skills, missing requirements, and suggested interview questions.
 - **Candidate comparison:** Compare 2–3 candidates side by side.
+- **Candidate review:** Filter by name, skill, or review status. Save notes for a candidate and role, and correct the candidate name or extracted resume text from their profile.
 - **CSV export:** Download candidate rankings for further analysis.
 
 ## Scoring Method
@@ -34,6 +37,8 @@ Default score weights:
 | Qualifications and certifications | 5% |
 | **Total** | **100%** |
 
+The weights are scaled to the criteria defined for each job. Run screening again after editing a resume or job description to refresh the ranking.
+
 The scores reflect information extracted from submitted resume text. They do not independently verify a candidate's qualifications or experience. Always review the original resume before making a hiring decision.
 
 ## Running Locally
@@ -41,7 +46,7 @@ The scores reflect information extracted from submitted resume text. They do not
 Python 3 is required.
 
 ```bash
-python -m http.server 8000 --bind 127.0.0.1 --directory dist
+python3 -m http.server 8000 --bind 127.0.0.1 --directory dist
 ```
 
 Open the following address in your browser:
@@ -57,6 +62,8 @@ Node.js 20 or later is required.
 ```bash
 node --test
 ```
+
+Pushes to `main` trigger the GitHub Pages workflow. It runs the matching tests before packaging and deploying `dist/`.
 
 ## Project Structure
 
@@ -97,8 +104,9 @@ No frontend framework or build tools are required.
 ## Known Limitations
 
 - **Scanned PDFs:** Image-only PDFs are not supported because the document parser extracts text layers rather than performing OCR. Resume text can be pasted manually instead.
-- **Unusual resume layouts:** Some documents may produce text in an incorrect order. Review the extracted text under "View original resume text" before evaluating a candidate.
+- **Unusual resume layouts:** Some documents may produce text in an incorrect order. Compare the original file with **View resume text** and correct the extraction with **Edit resume**.
 - **Year-only date ranges:** Dates such as 2020–2022 are treated as covering the complete calendar years.
+- **Session data:** Reloading clears resumes, jobs, scores, and review notes. Only the light or dark theme preference is saved in browser storage if available.
 
 ## Author
 

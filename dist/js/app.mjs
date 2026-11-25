@@ -1,5 +1,5 @@
 /**
- * ResuMatch — Application UI
+ * RESUME MATCHING — Application UI
  * Author: Abhinav Agrawal
  * github.com/agrawalabhinav372005-lang
  *
@@ -62,30 +62,64 @@ const comparisonLimit = 3;
 
 // ── Dark mode ───────────────────────────────────────────────────────────────
 function initTheme() {
-  const saved = localStorage.getItem('resumatch-theme');
   const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  applyTheme(saved ?? preferred);
+  let saved;
+  try {
+    saved = window.localStorage.getItem('resumatch-theme');
+  } catch {
+    // Storage may be unavailable in embedded or restricted browsers.
+  }
+  applyTheme(saved === 'dark' || saved === 'light' ? saved : preferred);
 }
 
 function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  localStorage.setItem('resumatch-theme', theme);
+  const dark = theme === 'dark';
+  const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
+  $('theme-toggle').setAttribute('aria-label', label);
+  $('theme-toggle').title = label;
   const icon = $('theme-icon');
-  if (icon) { icon.dataset.icon = theme === 'dark' ? 'sun' : 'moon'; fillIcon(icon); }
+  icon.dataset.icon = dark ? 'sun' : 'moon';
+  fillIcon(icon);
 }
 
 $('theme-toggle').addEventListener('click', () => {
-  applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(theme);
+  try {
+    window.localStorage.setItem('resumatch-theme', theme);
+  } catch {
+    // The new theme still applies for this page.
+  }
 });
 
 // ── Sidebar mobile toggle ───────────────────────────────────────────────────
-const sidebar = document.getElementById('sidebar');
-$('sidebar-toggle').addEventListener('click', () => sidebar.classList.toggle('open'));
-document.addEventListener('click', e => {
-  if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== $('sidebar-toggle'))
-    sidebar.classList.remove('open');
+const sidebar = $('sidebar');
+const sidebarToggle = $('sidebar-toggle');
+
+function setSidebarOpen(open) {
+  sidebar.classList.toggle('open', open);
+  sidebarToggle.setAttribute('aria-expanded', String(open));
+}
+
+sidebarToggle.addEventListener('click', () => setSidebarOpen(!sidebar.classList.contains('open')));
+document.addEventListener('click', event => {
+  if (sidebar.classList.contains('open') && !sidebar.contains(event.target) && !sidebarToggle.contains(event.target)) {
+    setSidebarOpen(false);
+  }
 });
-sidebar.querySelectorAll('nav a').forEach(a => a.addEventListener('click', () => sidebar.classList.remove('open')));
+sidebar.addEventListener('click', event => {
+  if (sidebar.classList.contains('open') && event.target.closest('nav a')) {
+    setSidebarOpen(false);
+    $('main').focus();
+  }
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && sidebar.classList.contains('open') && !$('dialog').open) {
+    setSidebarOpen(false);
+    sidebarToggle.focus();
+  }
+});
 
 // ── DOM helpers ─────────────────────────────────────────────────────────────
 function icon(name, className = '') {
@@ -134,8 +168,8 @@ function emptyState(iconName, title, description) {
 }
 
 // ── Data helpers ────────────────────────────────────────────────────────────
-function sourceProfile(name, text, format) {
-  return {id: String(++state.nextId), ...extractProfile(name, text), format};
+function sourceProfile(name, text, format, id = String(++state.nextId)) {
+  return {id, ...extractProfile(name, text), format};
 }
 
 function sourceJob(title, description) {
@@ -507,7 +541,8 @@ function showProfile(profile) {
     ...(scores.length > recommended.length
       ? [section('Other job match scores', recommendationRows(scores.filter(r => !isRecommendation(r)), true))]
       : []),
-    el('details', 'source-resume', el('summary', '', 'View original resume text'), el('pre', '', profile.text))
+    el('details', 'source-resume', el('summary', '', 'View resume text'), el('pre', '', profile.text)),
+    el('div', 'form-actions', button('Edit resume', 'button secondary', () => resumeEditor(profile), 'edit'))
   );
 }
 
@@ -646,10 +681,10 @@ function submitButton(label) {
 }
 
 // ── Paste editor ──────────────────────────────────────────────────────────────
-function pasteEditor() {
-  const name = input('name', 'e.g. Priya Sharma');
+function resumeEditor(profile) {
+  const name = input('name', 'e.g. Priya Sharma', profile?.name);
   name.required = true; name.maxLength = 160;
-  const content = textarea('resume', 'Paste the resume text here...');
+  const content = textarea('resume', 'Paste the resume text here...', profile?.text);
   content.required = true;
   const error = el('p', 'form-error');
   error.setAttribute('role', 'alert');
@@ -659,7 +694,7 @@ function pasteEditor() {
     error,
     el('div', 'form-actions',
       button('Cancel', 'button secondary', function() { $('dialog').close(); }),
-      submitButton('Add resume')
+      submitButton(profile ? 'Save resume' : 'Add resume')
     )
   );
   form.addEventListener('submit', function(event) {
@@ -668,12 +703,16 @@ function pasteEditor() {
       error.textContent = 'Please enter a name and resume text.';
       return;
     }
-    state.profiles.push(sourceProfile(name.value.trim(), content.value.trim(), 'Pasted text'));
+    const text = content.value.trim();
+    const format = profile && profile.text === text ? profile.format : profile ? 'Edited text' : 'Pasted text';
+    const updated = sourceProfile(name.value.trim(), text, format, profile?.id);
+    if (profile) state.profiles = state.profiles.map(item => item.id === profile.id ? updated : item);
+    else state.profiles.push(updated);
     $('dialog').close();
     changed();
-    notify('Candidate profile extracted.');
+    notify(profile ? 'Resume updated. Run screening to refresh the scores.' : 'Candidate profile extracted.');
   });
-  showDialog('Paste resume text', form);
+  showDialog(profile ? 'Edit resume' : 'Paste resume text', form);
 }
 
 // ── Job editor ────────────────────────────────────────────────────────────────
@@ -866,8 +905,8 @@ window.addEventListener('hashchange', renderView);
 $('close').addEventListener('click', function() { $('dialog').close(); });
 $('dialog').addEventListener('click', function(e) { if (e.target === $('dialog')) $('dialog').close(); });
 
-$('paste').addEventListener('click', pasteEditor);
-$('add-candidate-view').addEventListener('click', pasteEditor);
+$('paste').addEventListener('click', () => resumeEditor());
+$('add-candidate-view').addEventListener('click', () => resumeEditor());
 $('add-job').addEventListener('click', function() { jobEditor(); });
 $('add-job-view').addEventListener('click', function() { jobEditor(); });
 
