@@ -16,7 +16,6 @@ const paths = {
   layout:       '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18m-12 0v12"/>',
   users:        '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-4m-3-12a4 4 0 0 1 0 8"/><circle cx="9" cy="7" r="4"/>',
   briefcase:    '<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2m-5 6a20 20 0 0 0 18 0m-9 1v3"/>',
-  lock:         '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 4v3"/>',
   rotate:       '<path d="M3 11a9 9 0 1 1 2 7M3 5v6h6"/>',
   flask:        '<path d="M9 3h6m-5 0v7L5 19a1 1 0 0 0 1 2h12a1 1 0 0 0 1-2l-5-9V3M8 15h8"/>',
   'file-stack': '<path d="M7 18H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1m-3 12h4m-4-4h4"/><rect x="8" y="7" width="13" height="14" rx="2"/>',
@@ -29,8 +28,6 @@ const paths = {
   compare:      '<rect x="3" y="5" width="7" height="14" rx="1.5"/><rect x="14" y="5" width="7" height="14" rx="1.5"/>',
   x:            '<path d="m6 6 12 12M18 6 6 18"/>',
   edit:         '<path d="m14 6 4 4M5 19l4-1L20 7a2.8 2.8 0 0 0-4-4L5 14l-1 5Z"/>',
-  moon:         '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
-  sun:          '<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>',
   menu:         '<path d="M4 6h16M4 12h16M4 18h16"/>',
 };
 
@@ -59,39 +56,6 @@ const criteria = {
 
 const reviewStatuses = {todo: 'To review', 'follow-up': 'Follow up', reviewed: 'Reviewed'};
 const comparisonLimit = 3;
-
-// ── Dark mode ───────────────────────────────────────────────────────────────
-function initTheme() {
-  const preferred = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  let saved;
-  try {
-    saved = window.localStorage.getItem('resumatch-theme');
-  } catch {
-    // Storage may be unavailable in embedded or restricted browsers.
-  }
-  applyTheme(saved === 'dark' || saved === 'light' ? saved : preferred);
-}
-
-function applyTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  const dark = theme === 'dark';
-  const label = dark ? 'Switch to light mode' : 'Switch to dark mode';
-  $('theme-toggle').setAttribute('aria-label', label);
-  $('theme-toggle').title = label;
-  const icon = $('theme-icon');
-  icon.dataset.icon = dark ? 'sun' : 'moon';
-  fillIcon(icon);
-}
-
-$('theme-toggle').addEventListener('click', () => {
-  const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-  applyTheme(theme);
-  try {
-    window.localStorage.setItem('resumatch-theme', theme);
-  } catch {
-    // The new theme still applies for this page.
-  }
-});
 
 // ── Sidebar mobile toggle ───────────────────────────────────────────────────
 const sidebar = $('sidebar');
@@ -966,5 +930,4 @@ $('files').addEventListener('change', function(event) {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-initTheme();
 loadSample();

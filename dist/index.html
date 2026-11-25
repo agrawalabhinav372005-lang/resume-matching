@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -18,17 +18,13 @@
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <span class="brand-mark" data-icon="layers"></span>
-      <span>RESUME MATCHING<small>by Abhinav Agrawal</small></span>
+      <span>RESUME MATCHING</span>
     </div>
     <nav aria-label="Workspace">
       <a href="#screening" aria-current="page"><span data-icon="layout"></span>Screening</a>
       <a href="#candidates"><span data-icon="users"></span>Candidates</a>
       <a href="#jobs"><span data-icon="briefcase"></span>Job Descriptions</a>
     </nav>
-    <div class="sidebar-foot">
-      <span class="sidebar-lock" data-icon="lock"></span>
-      <span>100% Browser-based<small>Your files never leave this tab</small></span>
-    </div>
   </aside>
 
   <!-- Main workspace -->
@@ -39,9 +35,6 @@
       </button>
       <span id="breadcrumb">Workspace <span class="slash">/</span> <strong>Screening</strong></span>
       <div class="topbar-actions">
-        <button id="theme-toggle" class="icon-button" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
-          <span data-icon="moon" id="theme-icon"></span>
-        </button>
         <button id="reset" class="button subtle" type="button"><span data-icon="rotate"></span>Reset</button>
       </div>
     </header>
@@ -51,10 +44,13 @@
       <section id="screening-view" class="view" aria-label="Screening">
         <div class="heading">
           <div>
-            <h1 id="title">Résumé Screening</h1>
-            <p id="subtitle">Upload résumés, add job criteria, and get instant ranked results.</p>
+            <h1 id="title">Resume Screening</h1>
+            <p id="subtitle">Upload resumes, add job criteria, and get instant ranked results.</p>
           </div>
-          <button id="demo" class="button secondary" type="button"><span data-icon="flask"></span>Load Sample Data</button>
+          <div class="heading-actions">
+            <a class="button secondary" href="./dataset/resume-matching-test-dataset.zip" download><span data-icon="download"></span>Download Test Dataset</a>
+            <button id="demo" class="button secondary" type="button"><span data-icon="flask"></span>Load Sample Data</button>
+          </div>
         </div>
 
         <div id="summary" class="summary"></div>
@@ -70,8 +66,8 @@
             <div class="panel-heading">
               <span class="icon-box" data-icon="file-stack"></span>
               <div>
-                <h3 id="resume-title">Candidate Résumés</h3>
-                <p>Upload PDF, DOCX, or TXT — or paste text directly.</p>
+                <h3 id="resume-title">Candidate Resumes</h3>
+                <p>Upload a file or paste resume text.</p>
               </div>
               <button class="button subtle compact" type="button" id="paste"><span data-icon="plus"></span>Paste Text</button>
             </div>
@@ -109,7 +105,7 @@
           <div class="section-heading results-heading">
             <div>
               <h2 id="results-title">Candidate Rankings</h2>
-              <p>Compare résumés for the selected role and track your review status.</p>
+              <p>Compare resumes for the selected role and track your review status.</p>
             </div>
             <div class="result-controls">
               <label class="visually-hidden" for="role-select">Job to rank against</label>
@@ -146,7 +142,7 @@
       <section id="candidates-view" class="view" aria-label="Candidates" hidden>
         <div class="section-heading">
           <h2>Candidate Profiles</h2>
-          <button id="add-candidate-view" class="button primary" type="button"><span data-icon="plus"></span>Add Résumé</button>
+          <button id="add-candidate-view" class="button primary" type="button"><span data-icon="plus"></span>Add Resume</button>
         </div>
         <div id="candidate-cards" class="cards"></div>
       </section>
@@ -161,8 +157,7 @@
       </section>
 
       <footer>
-        Built by <a href="https://github.com/agrawalabhinav372005-lang" target="_blank" rel="noopener">Abhinav Agrawal</a> ·
-        Scores guide review — always check the original résumé before making a decision.
+        Match scores can guide your review. Check the original resume before making a decision.
       </footer>
     </main>
   </div>

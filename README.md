@@ -10,6 +10,15 @@ The application processes documents directly in the browser, without uploading c
 
 The demo opens with fictional candidates and jobs. Try changing the selected role or comparing two candidates. Select **Reset** to start with your own resumes and job descriptions.
 
+## Test dataset
+
+[Download the test dataset](https://agrawalabhinav372005-lang.github.io/resume-matching/dataset/resume-matching-test-dataset.zip) to try the upload workflow. It includes four fictional resumes in PDF, DOCX, and TXT formats, three job descriptions, and an expected rankings CSV.
+
+1. Open the live demo and select **Reset** to clear the built-in examples.
+2. Upload the four files in the `resumes/` folder.
+3. For each file in `jobs/`, select **Add Job**, enter the job title, paste the description, and save the extracted criteria.
+4. Select **Run Screening**. Use the role selector to compare the results with `expected-rankings.csv`.
+
 ## Features
 
 - **Resume upload:** Upload PDF, DOCX, or TXT files, or paste resume text directly.
@@ -74,6 +83,8 @@ resume-matching/
 │   ├── assets/
 │   │   ├── styles.css
 │   │   └── extras.css
+│   ├── dataset/
+│   │   └── resume-matching-test-dataset.zip
 │   ├── js/
 │   │   ├── app.mjs
 │   │   ├── engine.mjs
@@ -106,7 +117,7 @@ No frontend framework or build tools are required.
 - **Scanned PDFs:** Image-only PDFs are not supported because the document parser extracts text layers rather than performing OCR. Resume text can be pasted manually instead.
 - **Unusual resume layouts:** Some documents may produce text in an incorrect order. Compare the original file with **View resume text** and correct the extraction with **Edit resume**.
 - **Year-only date ranges:** Dates such as 2020–2022 are treated as covering the complete calendar years.
-- **Session data:** Reloading clears resumes, jobs, scores, and review notes. Only the light or dark theme preference is saved in browser storage if available.
+- **Session data:** Reloading clears resumes, jobs, scores, and review notes.
 
 ## Author
 
