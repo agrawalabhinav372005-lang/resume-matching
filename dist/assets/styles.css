@@ -93,7 +93,7 @@ button:focus-visible, select:focus-visible, a:focus-visible, input:focus-visible
   display: flex; align-items: center; gap: 11px;
   padding: 0 6px;
   line-height: 1.25;
-  font-size: 1rem;
+  font-size: .92rem;
   font-weight: 760;
   letter-spacing: -.025em;
 }
