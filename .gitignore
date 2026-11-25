@@ -8,3 +8,4 @@ __pycache__/
 # Local hosting configuration and packaged source downloads
 dist/downloads/
 
+/workspace-data/

@@ -1,126 +1,53 @@
 # RESUME MATCHING
 
-RESUME MATCHING is a browser-based tool for reviewing resumes against job requirements.
+A single-user recruiting workspace for collecting resumes, ranking candidates by job, and recording what you verified.
 
-Upload candidate resumes, add a job description, and get ranked results based on skills, experience, education, and qualifications. The application also highlights missing skills and suggests questions that can be useful during interviews.
+[Open the workspace on GitHub Pages](https://agrawalabhinav372005-lang.github.io/resume-matching/)
 
-The application processes documents directly in the browser, without uploading candidate data to a backend server.
+## Hiring workflow
 
-**[Live Demo](https://agrawalabhinav372005-lang.github.io/resume-matching/)**
+1. **Add a job.** Paste the job description, extract the criteria, and check the required skills, experience, education, and credentials before saving.
+2. **Collect resumes.** Choose a job in **Assign uploads to**, then upload PDF, DOCX, or TXT files or paste resume text. Resumes with no specific job are considered for every role. Edit a candidate profile to correct the extracted text or change the assignment.
+3. **Review the ranking.** Select a job in **Candidate Rankings**. The workspace refreshes scores when resumes or criteria change. Use **Requirements found** or **Needs verification** to filter the ranking. The groups reflect evidence detected in resume text.
+4. **Check the evidence.** Open **Review match** to inspect the score breakdown, resume excerpts, and suggested follow-up questions. Record notes and mark the evidence checked yourself. Editing the underlying resume text or role criteria returns checked evidence to **To verify** and keeps the notes.
+5. **Compare or export.** Compare up to three candidates side by side or export the complete ranking for the selected role. The CSV includes scores, requirement groups, and verification status.
 
-The demo opens with fictional candidates and jobs. Try changing the selected role or comparing two candidates. Select **Reset** to start with your own resumes and job descriptions.
+File parsing and matching run in the browser. Text-based PDFs work directly. For a scanned PDF, paste the extracted text. Match scores reflect the supplied text and support human review.
 
-## Test dataset
+## Storage and local backend
 
-[Download the test dataset](https://agrawalabhinav372005-lang.github.io/resume-matching/dataset/resume-matching-test-dataset.zip) to try the upload workflow. It includes four fictional resumes in PDF, DOCX, and TXT formats, three job descriptions, and an expected rankings CSV.
+The GitHub Pages workspace saves records in IndexedDB for the current browser profile. Clearing browser site data removes those records. Use the workspace on a device and browser profile you control.
 
-1. Open the live demo and select **Reset** to clear the built-in examples.
-2. Upload the four files in the `resumes/` folder.
-3. For each file in `jobs/`, select **Add Job**, enter the job title, paste the description, and save the extracted criteria.
-4. Select **Run Screening**. Use the role selector to compare the results with `expected-rankings.csv`.
+For a local database, start the Python 3 server from the repository root:
 
-## Features
-
-- **Resume upload:** Upload PDF, DOCX, or TXT files, or paste resume text directly.
-- **Job description analysis:** Extract skills, experience requirements, and education criteria from job descriptions.
-- **Candidate ranking:** Calculate match scores and rank candidates for a particular role.
-- **Skill analysis:** View matched skills, missing requirements, and suggested interview questions.
-- **Candidate comparison:** Compare 2–3 candidates side by side.
-- **Candidate review:** Filter by name, skill, or review status. Save notes for a candidate and role, and correct the candidate name or extracted resume text from their profile.
-- **CSV export:** Download candidate rankings for further analysis.
-
-## Scoring Method
-
-The matching engine uses an English skills dictionary along with role-specific terms added by the user.
-
-It also supports common skill aliases (for example, JS → JavaScript), basic negation detection, and date range extraction from work experience.
-
-Default score weights:
-
-| Category | Weight |
-|---|---:|
-| Required skills | 60% |
-| Preferred skills | 15% |
-| Experience | 15% |
-| Education | 5% |
-| Qualifications and certifications | 5% |
-| **Total** | **100%** |
-
-The weights are scaled to the criteria defined for each job. Run screening again after editing a resume or job description to refresh the ranking.
-
-The scores reflect information extracted from submitted resume text. They do not independently verify a candidate's qualifications or experience. Always review the original resume before making a hiring decision.
-
-## Running Locally
-
-Python 3 is required.
-
-```bash
-python3 -m http.server 8000 --bind 127.0.0.1 --directory dist
+```sh
+python3 server.py
 ```
 
-Open the following address in your browser:
+Open `http://127.0.0.1:8000`. The app saves resume text, job criteria, assignments, and review notes in `workspace-data/workspace.sqlite3`. Use `--database /path/to/workspace.sqlite3` to choose a different file and `--port` to choose a different port. The server listens on the loopback interface for one recruiter. The browser and database modes maintain independent workspaces. Candidate files are supplied through the recruiter's upload and paste controls.
 
-`http://127.0.0.1:8000`
+## Matching
 
-The application runs in the browser and does not require a backend server, API keys, or a build step.
+| Criterion | Weight |
+| --- | ---: |
+| Required skills | 60 |
+| Preferred skills | 15 |
+| Experience | 15 |
+| Education | 5 |
+| Qualifications | 5 |
 
-## Running Tests
+The score normalizes the weights to the criteria defined for the role. Overlapping dated roles count once. Ranges written with years only count the complete calendar years. Experience is measured across detected work history. Priority within a tied score goes to candidates with greater required-skill coverage.
 
-Node.js 20 or later is required.
+## Project layout
 
-```bash
-node --test
-```
+- `dist/index.html` and `dist/assets/` contain the workspace UI.
+- `dist/js/` contains intake, NLP and scoring, verification, and storage.
+- `dist/vendor/` contains the document readers, font, and licenses.
+- `server.py` serves the application and the local workspace API.
+- `tests/` contains regression tests and fictional fixtures.
 
-Pushes to `main` trigger the GitHub Pages workflow. It runs the matching tests before packaging and deploying `dist/`.
-
-## Project Structure
-
-```text
-resume-matching/
-├── dist/
-│   ├── index.html
-│   ├── assets/
-│   │   ├── styles.css
-│   │   └── extras.css
-│   ├── dataset/
-│   │   └── resume-matching-test-dataset.zip
-│   ├── js/
-│   │   ├── app.mjs
-│   │   ├── engine.mjs
-│   │   ├── documents.mjs
-│   │   └── sample.mjs
-│   └── vendor/
-│       ├── pdfjs
-│       └── mammoth
-├── tests/
-│   └── engine.test.mjs
-├── .github/
-│   └── workflows/
-│       └── deploy.yml
-├── .gitignore
-└── README.md
-```
-
-## Technology Stack
-
-- Vanilla JavaScript
-- JavaScript ES Modules
-- PDF.js for PDF document parsing
-- Mammoth.js for DOCX document parsing
-- Node.js for running tests
-
-No frontend framework or build tools are required.
-
-## Known Limitations
-
-- **Scanned PDFs:** Image-only PDFs are not supported because the document parser extracts text layers rather than performing OCR. Resume text can be pasted manually instead.
-- **Unusual resume layouts:** Some documents may produce text in an incorrect order. Compare the original file with **View resume text** and correct the extraction with **Edit resume**.
-- **Year-only date ranges:** Dates such as 2020–2022 are treated as covering the complete calendar years.
-- **Session data:** Reloading clears resumes, jobs, scores, and review notes.
+Run the regression tests with `node --test`. Pushes to `main` run the tests and publish the static workspace to GitHub Pages.
 
 ## Author
 
-**Abhinav Agrawal**
-
-[GitHub Profile](https://github.com/agrawalabhinav372005-lang)
+Abhinav Agrawal

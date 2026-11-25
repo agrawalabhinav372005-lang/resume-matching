@@ -7,9 +7,9 @@
   <meta name="author" content="Abhinav Agrawal">
   <title>RESUME MATCHING</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./assets/styles.css?v=light-blue">
-  <link rel="stylesheet" href="./assets/extras.css?v=light-blue">
-  <script type="module" src="./js/app.mjs?v=light-blue"></script>
+  <link rel="stylesheet" href="./assets/styles.css?v=work">
+  <link rel="stylesheet" href="./assets/extras.css?v=work">
+  <script type="module" src="./js/app.mjs?v=work"></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to main content</a>
@@ -35,21 +35,21 @@
       </button>
       <span id="breadcrumb">Workspace <span class="slash">/</span> <strong>Screening</strong></span>
       <div class="topbar-actions">
-        <button id="reset" class="button subtle" type="button"><span data-icon="rotate"></span>Reset</button>
+        <span id="save-status" class="save-status" role="status">Opening workspace…</span>
+        <button id="reset" class="button subtle" type="button" disabled><span data-icon="rotate"></span>Clear workspace</button>
       </div>
     </header>
 
-    <main id="main" tabindex="-1">
+    <main id="main" tabindex="-1" inert>
       <!-- Screening view -->
       <section id="screening-view" class="view" aria-label="Screening">
         <div class="heading">
           <div>
-            <h1 id="title">Resume Screening</h1>
-            <p id="subtitle">Upload resumes, add job criteria, and get instant ranked results.</p>
+            <h1 id="title">Screening workspace</h1>
+            <p id="subtitle">Add a job, collect resumes, and review the evidence behind each match.</p>
           </div>
           <div class="heading-actions">
-            <a class="button secondary" href="./dataset/resume-matching-test-dataset.zip" download><span data-icon="download"></span>Download Test Dataset</a>
-            <button id="demo" class="button secondary" type="button"><span data-icon="flask"></span>Load Sample Data</button>
+            <button id="start-job" class="button primary" type="button"><span data-icon="plus"></span>Add a job</button>
           </div>
         </div>
 
@@ -57,7 +57,6 @@
 
         <div class="section-heading">
           <h2>Screening Inputs</h2>
-          <span id="input-status" class="status-pill"></span>
         </div>
 
         <div class="input-grid">
@@ -71,6 +70,7 @@
               </div>
               <button class="button subtle compact" type="button" id="paste"><span data-icon="plus"></span>Paste Text</button>
             </div>
+            <label class="intake-role" for="intake-role"><span>Assign uploads to</span><select id="intake-role"></select></label>
             <button class="dropzone" id="dropzone" type="button">
               <span class="upload-icon" data-icon="upload"></span>
               <strong>Click to upload <span>or drag and drop</span></strong>
@@ -97,15 +97,15 @@
         <!-- Run screening -->
         <div class="run-row">
           <p id="run-note" role="status"></p>
-          <button id="run" class="button primary" type="button"><span data-icon="target"></span>Run Screening</button>
+          <button id="run" class="button secondary" type="button"><span data-icon="target"></span>View rankings</button>
         </div>
 
         <!-- Results section -->
         <section class="results" aria-labelledby="results-title">
           <div class="section-heading results-heading">
             <div>
-              <h2 id="results-title">Candidate Rankings</h2>
-              <p>Compare resumes for the selected role and track your review status.</p>
+              <h2 id="results-title" tabindex="-1">Candidate Rankings</h2>
+              <p>Ranked for the selected job. Open a match to verify the evidence.</p>
             </div>
             <div class="result-controls">
               <label class="visually-hidden" for="role-select">Job to rank against</label>
@@ -113,6 +113,7 @@
               <button id="export" class="button secondary" type="button"><span data-icon="download"></span>Export CSV</button>
             </div>
           </div>
+          <div id="rank-groups" class="rank-groups" role="group" aria-label="Group candidates by requirements" hidden></div>
           <div id="review-toolbar" class="review-toolbar" hidden>
             <label class="search-box">
               <span data-icon="search"></span>
@@ -123,9 +124,9 @@
               <span class="visually-hidden">Filter by review status</span>
               <select id="status-filter">
                 <option value="">All statuses</option>
-                <option value="todo">To review</option>
+                <option value="todo">To verify</option>
                 <option value="follow-up">Follow up</option>
-                <option value="reviewed">Reviewed</option>
+                <option value="reviewed">Evidence checked</option>
               </select>
             </label>
             <button type="button" class="button secondary" id="compare">

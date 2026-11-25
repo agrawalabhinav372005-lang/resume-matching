@@ -1,8 +1,8 @@
 ﻿import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {analyze, extractProfile, normalizeSkills, parseJob, scoreProfile} from '../dist/js/engine.mjs';
-import {sampleJobs, sampleResumes} from '../dist/js/sample.mjs';
+import {analyze, extractProfile, normalizeSkills, parseJob, requirementsGroup, scoreProfile, skillEvidence} from '../dist/js/engine.mjs';
+import {sampleJobs, sampleResumes} from './fixtures/sample.mjs';
 
 test('sample résumés rank first for the jobs that fit their experience', () => {
   const asOf = new Date(2025, 11, 1);
@@ -67,3 +67,20 @@ test('standalone sections classify bullets and exclude benefits from criteria', 
   assert.equal(job.years, 0);
 });
 
+
+test('rankings group applicants by assigned job and flag gaps in mandatory evidence', () => {
+  const profiles = [
+    {...extractProfile('Assigned', 'Skills: SQL, Docker'), id: 'a', jobId: 'analyst'},
+    {...extractProfile('General pool', 'Skills: Python'), id: 'b'}
+  ];
+  const jobs = [
+    {...parseJob('Analyst', 'Required skills: SQL'), id: 'analyst'},
+    {...parseJob('Engineer', 'Required skills: Docker'), id: 'engineer'}
+  ];
+  const {pairs, recommendations} = analyze(profiles, jobs);
+  assert.deepEqual(pairs[0].candidates.map(item => item.profile.id), ['a', 'b']);
+  assert.deepEqual(pairs[1].candidates.map(item => item.profile.id), ['b']);
+  assert.deepEqual(pairs[0].candidates.map(requirementsGroup), ['ready', 'gaps']);
+  assert.deepEqual(skillEvidence(profiles[0], ['SQL', 'Python']), [{skill: 'SQL', line: 'SQL, Docker'}]);
+  assert.equal(recommendations[0].jobs.length, 2);
+});

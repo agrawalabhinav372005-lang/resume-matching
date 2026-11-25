@@ -6,9 +6,9 @@
  * Browser-only resume screening tool. No server, no API keys needed.
  */
 
-import {analyze, degreeOptions, extractProfile, normalizeSkills, parseJob, weights} from './engine.mjs';
+import {analyze, degreeOptions, extractProfile, normalizeSkills, parseJob, requirementsGroup, skillEvidence, weights} from './engine.mjs?v=work';
 import {maxCharacters, readDocument} from './documents.mjs';
-import {sampleJobs, sampleResumes} from './sample.mjs';
+import {openWorkspace} from './storage.mjs?v=work';
 
 // ── SVG icon paths ─────────────────────────────────────────────────────────
 const paths = {
@@ -17,7 +17,6 @@ const paths = {
   users:        '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-4m-3-12a4 4 0 0 1 0 8"/><circle cx="9" cy="7" r="4"/>',
   briefcase:    '<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2m-5 6a20 20 0 0 0 18 0m-9 1v3"/>',
   rotate:       '<path d="M3 11a9 9 0 1 1 2 7M3 5v6h6"/>',
-  flask:        '<path d="M9 3h6m-5 0v7L5 19a1 1 0 0 0 1 2h12a1 1 0 0 0 1-2l-5-9V3M8 15h8"/>',
   'file-stack': '<path d="M7 18H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1m-3 12h4m-4-4h4"/><rect x="8" y="7" width="13" height="14" rx="2"/>',
   file:         '<path d="M13 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10Zm0 0v7h7M8 14h8m-8 3h6"/>',
   plus:         '<path d="M12 5v14M5 12h14"/>',
@@ -35,13 +34,13 @@ const $ = id => document.getElementById(id);
 
 // ── App state ───────────────────────────────────────────────────────────────
 const state = {
-  profiles: [], jobs: [], results: null, selected: '', sample: false,
+  profiles: [], jobs: [], results: null, selected: '', intakeJob: '', group: 'all',
   nextId: 0, epoch: 0, reading: false,
   search: '', statusFilter: '', comparison: new Set(), reviews: new Map(),
 };
 
 const views = {
-  screening:  ['Screening',        'Resume Screening',       'Upload resumes, add job criteria, and get instant ranked results.'],
+  screening:  ['Screening',        'Screening workspace',    'Add a job, collect resumes, and review the evidence behind each match.'],
   candidates: ['Candidates',       'Candidate Profiles',     "Get to know each candidate's experience and see which roles fit their skills."],
   jobs:       ['Job Descriptions', 'Role Requirements',      'Review the skills and qualifications that matter for each role.'],
 };
@@ -54,8 +53,12 @@ const criteria = {
   qualifications: 'Qualifications',
 };
 
-const reviewStatuses = {todo: 'To review', 'follow-up': 'Follow up', reviewed: 'Reviewed'};
+const reviewStatuses = {todo: 'To verify', 'follow-up': 'Follow up', reviewed: 'Evidence checked'};
+const rankingGroups = {all: 'All candidates', ready: 'Requirements found', gaps: 'Needs verification'};
 const comparisonLimit = 3;
+let storage;
+let revision = 0;
+let pendingSave = Promise.resolve();
 
 // ── Sidebar mobile toggle ───────────────────────────────────────────────────
 const sidebar = $('sidebar');
@@ -132,12 +135,8 @@ function emptyState(iconName, title, description) {
 }
 
 // ── Data helpers ────────────────────────────────────────────────────────────
-function sourceProfile(name, text, format, id = String(++state.nextId)) {
-  return {id, ...extractProfile(name, text), format};
-}
-
-function sourceJob(title, description) {
-  return {id: String(++state.nextId), ...parseJob(title, description)};
+function sourceProfile(name, text, format, jobId, id = String(++state.nextId)) {
+  return {id, ...extractProfile(name, text), format, jobId};
 }
 
 function quantity(amount, word) {
@@ -220,17 +219,13 @@ function render() {
     return el('div', 'metric', icon(name, 'icon-box ' + tone),
       el('div', '', el('strong', '', String(value)), el('small', '', title)));
   }));
-  const status = $('input-status');
-  status.classList.toggle('neutral', !state.sample && !state.results);
-  status.textContent = state.sample ? 'Sample workspace'
-    : state.results ? 'Screening complete' : 'Workspace inputs';
-  $('demo').disabled = state.reading || state.sample;
+  $('reset').disabled = !state.profiles.length && !state.jobs.length && !state.reading;
   $('run').disabled  = state.reading || !state.profiles.length || !state.jobs.length;
   $('run-note').textContent = state.reading ? 'Reading resume files...'
-    : state.results ? 'Rankings are up to date.'
+    : state.results ? 'Rankings update when resumes or job criteria change.'
     : !state.profiles.length || !state.jobs.length
       ? 'Add a resume and a job description to get started.'
-      : 'Ready to run screening?';
+      : '';
   renderInputs();
   renderRanking();
   renderCards();
@@ -238,11 +233,17 @@ function render() {
 
 // ── Inputs panel ──────────────────────────────────────────────────────────────
 function renderInputs() {
+  const intake = $('intake-role');
+  intake.replaceChildren(new Option('No specific job', ''), ...state.jobs.map(job => new Option(job.title, job.id)));
+  intake.value = state.intakeJob;
+  intake.disabled = !state.jobs.length || state.reading;
+  $('dropzone').disabled = state.reading;
   const resumeList = $('resume-preview');
   resumeList.replaceChildren(...state.profiles.slice(0, 2).map(function(profile) {
     return el('div', 'item-row',
       icon('file'),
-      el('div', 'item-content', el('strong', 'item-name', profile.name), el('small', 'item-meta', profile.format)),
+      el('div', 'item-content', el('strong', 'item-name', profile.name),
+        el('small', 'item-meta', state.jobs.find(job => job.id === profile.jobId)?.title ?? profile.format)),
       iconButton('Remove resume for ' + profile.name, 'x', function() { confirmRemove('profile', profile); })
     );
   }));
@@ -280,6 +281,23 @@ function workflowStatus(status) {
   return el('span', 'review-status ' + status, reviewStatuses[status]);
 }
 
+function renderGroups(pair) {
+  const container = $('rank-groups');
+  container.hidden = !pair?.candidates.length;
+  if (container.hidden) return;
+  const counts = {all: pair.candidates.length, ready: 0, gaps: 0};
+  for (const result of pair.candidates) counts[requirementsGroup(result)]++;
+  container.replaceChildren(...Object.entries(rankingGroups).map(([key, label]) => {
+    const control = button(label + ' (' + counts[key] + ')', 'group-filter', () => {
+      state.group = key;
+      renderRanking();
+      container.querySelector('[aria-pressed="true"]').focus();
+    });
+    control.setAttribute('aria-pressed', String(key === state.group));
+    return control;
+  }));
+}
+
 function rankCandidates(candidates) {
   let rank = 0, prior;
   return candidates.map(function(result, index) {
@@ -301,6 +319,7 @@ function renderRanking() {
   select.disabled = !state.jobs.length;
 
   const pair = selectedPair();
+  renderGroups(pair);
   $('review-toolbar').hidden = !pair;
   $('candidate-search').value = state.search;
   $('status-filter').value = state.statusFilter;
@@ -308,7 +327,12 @@ function renderRanking() {
   $('export').disabled = !pair?.candidates.some(r => r.score !== null);
 
   if (!pair) {
-    $('ranking').replaceChildren(emptyState('target', 'No results yet', 'Run screening to see candidate rankings for this job.'));
+    $('ranking').replaceChildren(emptyState('target', 'No rankings yet', 'Add a job and its candidate resumes to see the rankings here.'));
+    return;
+  }
+  if (!pair.candidates.length) {
+    $('review-toolbar').hidden = true;
+    $('ranking').replaceChildren(emptyState('users', 'No candidates for this job', 'Assign resumes to this job or leave them unassigned to consider them for every job.'));
     return;
   }
 
@@ -317,17 +341,18 @@ function renderRanking() {
     var profile = item.profile, matched = item.matched;
     const text = [profile.name, ...profile.skills, ...matched.required, ...matched.preferred].join(' ').toLowerCase();
     return (!query || text.includes(query)) &&
+           (state.group === 'all' || requirementsGroup(item) === state.group) &&
            (!state.statusFilter || getReview(pair.job, profile).status === state.statusFilter);
   });
 
   $('result-count').textContent = visible.length + ' of ' + quantity(pair.candidates.length, 'candidate');
 
   if (!visible.length) {
-    $('ranking').replaceChildren(emptyState('search', 'No matches', 'No candidates match these filters. Try another name, skill, or review status.'));
+    $('ranking').replaceChildren(emptyState('search', 'No matches', 'Try a different group, name, skill, or review status.'));
     return;
   }
 
-  const headings = ['Compare', 'Rank', 'Candidate', 'Match score', 'Required skills', 'Review status', ''];
+  const headings = ['Compare', 'Rank', 'Candidate', 'Match score', 'Required skills', 'Verification', ''];
   const headers = headings.map(function(label) {
     const header = el('th', '', label || el('span', 'visually-hidden', 'Actions'));
     header.scope = 'col';
@@ -348,10 +373,12 @@ function renderRanking() {
     });
     const reviewBtn = button('Review match', 'plain-link evidence-button', function() { showResult(result, pair.job); });
     reviewBtn.setAttribute('aria-label', 'Review match for ' + profile.name);
+    const group = requirementsGroup(result);
     const skills = el('div', 'coverage',
       el('span', 'help', pair.job.requiredSkills.length
         ? matched.required.length + ' of ' + pair.job.requiredSkills.length + ' found'
         : 'No required skills'),
+      el('span', 'requirements-status ' + group, rankingGroups[group]),
       ...(matched.required.length ? [tags(matched.required, 2)] : []));
     return el('tr', '',
       el('td', '', checked),
@@ -416,7 +443,7 @@ function renderCards() {
     return el('article', 'panel card',
       el('div', 'card-head', avatar(profile), el('h3', 'card-title', profile.name),
         iconButton('Remove resume for ' + profile.name, 'x', function() { confirmRemove('profile', profile); })),
-      el('p', 'card-meta', experience(profile) + ' \u00b7 ' + quantity(profile.skills.length, 'skill')),
+      el('p', 'card-meta', [state.jobs.find(job => job.id === profile.jobId)?.title, experience(profile), quantity(profile.skills.length, 'skill')].filter(Boolean).join(' · ')),
       profile.skills.length ? tags(profile.skills, 6) : el('p', 'card-meta', 'No skills detected.'),
       el('div', '', el('h4', '', 'Recommended jobs'),
         ranked.length ? recommendationRows(ranked.slice(0, 3))
@@ -431,6 +458,7 @@ function renderCards() {
   const jobCards = state.jobs.map(function(job) {
     return el('article', 'panel card',
       el('div', 'card-head', icon('briefcase', 'icon-box teal'), el('h3', 'card-title', job.title)),
+      el('p', 'card-meta', quantity(state.profiles.filter(profile => profile.jobId === job.id).length, 'assigned candidate')),
       el('div', '', el('h4', '', 'Required skills'),
         job.requiredSkills.length ? tags(job.requiredSkills) : el('p', 'card-meta', 'None specified.')),
       el('div', '', el('h4', '', 'Preferred skills'),
@@ -494,6 +522,7 @@ function showProfile(profile) {
   const scores = state.results?.recommendations.find(item => item.profile.id === profile.id)?.jobs ?? [];
   const recommended = scores.filter(isRecommendation);
   showDialog(profile.name,
+    section('Assigned job', el('p', '', state.jobs.find(job => job.id === profile.jobId)?.title ?? 'No specific job')),
     section('Skills', profile.skills.length ? tags(profile.skills) : el('p', '', 'No skills detected.')),
     section('Education', lines(profile.education, 'No education evidence detected.')),
     section('Qualifications', lines(profile.qualifications, 'No qualification evidence detected.')),
@@ -501,7 +530,7 @@ function showProfile(profile) {
       lines(profile.roles, 'No employment history detected.')),
     section('Job recommendations',
       recommended.length ? recommendationRows(recommended, true)
-        : el('p', '', state.results ? 'No roles met the recommendation criteria.' : 'Run screening to see recommendations.')),
+        : el('p', '', state.results ? 'No roles met the recommendation criteria.' : 'Add a job to see recommendations.')),
     ...(scores.length > recommended.length
       ? [section('Other job match scores', recommendationRows(scores.filter(r => !isRecommendation(r)), true))]
       : []),
@@ -533,15 +562,16 @@ function reviewForm(job, profile) {
   const confirmation = el('span', 'help review-confirmation');
   confirmation.setAttribute('role', 'status');
   const form = el('form', 'review-form',
-    field('Status', status),
-    field('Notes for this role', note, 'Notes stay in this browser session.'),
+    field('Verification status', status),
+    field('Notes for this role', note, 'Record what you checked against the original resume.'),
     el('div', 'form-actions', confirmation, submitButton('Save review'))
   );
-  form.addEventListener('submit', function(event) {
+  form.addEventListener('submit', async function(event) {
     event.preventDefault();
     state.reviews.set(reviewKey(job, profile), {status: status.value, note: note.value.trim()});
-    confirmation.textContent = 'Review saved.';
     renderRanking();
+    confirmation.textContent = 'Saving review…';
+    confirmation.textContent = await saveWorkspace() ? 'Review saved.' : 'Review updated for this session.';
   });
   return form;
 }
@@ -572,12 +602,16 @@ function showResult(result, job) {
     }
   }
   const questions = followUpQuestions(result, job);
+  const excerpts = skillEvidence(profile, matched.required);
   const skillsSummary = job.requiredSkills.length
     ? 'The resume shows ' + matched.required.length + ' of ' + job.requiredSkills.length + ' required skills.'
     : 'This role has no required skills listed.';
   showDialog(profile.name + ' \u00b7 ' + job.title,
     el('div', 'detail-score', scoreDisplay(score), el('p', 'help', total ? skillsSummary : 'This job has no scoring criteria.')),
     ...details,
+    ...(excerpts.length ? [section('Resume evidence',
+      el('ul', 'evidence-list', ...excerpts.map(({skill, line}) => el('li', '', el('strong', '', skill), el('p', '', line))))
+    )] : []),
     ...(questions.length ? [section('Suggested follow-up questions', lines(questions, ''))] : []),
     section('Your review', reviewForm(job, profile)),
     el('div', 'form-actions', button('View candidate profile', 'button secondary', function() { showProfile(profile); }))
@@ -595,17 +629,21 @@ function confirmAction(title, message, action, handler) {
 }
 
 function changed() {
-  state.sample = false;
-  state.results = null;
   state.comparison.clear();
-  render();
+  recalculate();
+  saveWorkspace();
 }
 
 function confirmRemove(kind, item) {
   const title = kind === 'profile' ? item.name : item.title;
-  confirmAction('Remove ' + title + '?', 'This will remove the item and clear current rankings.', 'Remove', function() {
+  const explanation = kind === 'profile' ? 'This removes the resume and its review notes.' : 'This removes the job and its notes. Assigned resumes return to the general pool.';
+  confirmAction('Remove ' + title + '?', explanation, 'Remove', function() {
     if (kind === 'profile') state.profiles = state.profiles.filter(p => p.id !== item.id);
-    else state.jobs = state.jobs.filter(j => j.id !== item.id);
+    else {
+      state.jobs = state.jobs.filter(j => j.id !== item.id);
+      for (const profile of state.profiles) if (profile.jobId === item.id) profile.jobId = '';
+      if (state.intakeJob === item.id) state.intakeJob = '';
+    }
     for (const key of state.reviews.keys()) {
       const parts = key.split('/');
       if ((kind === 'profile' ? parts[1] : parts[0]) === item.id) state.reviews.delete(key);
@@ -650,10 +688,13 @@ function resumeEditor(profile) {
   name.required = true; name.maxLength = 160;
   const content = textarea('resume', 'Paste the resume text here...', profile?.text);
   content.required = true;
+  const job = el('select', '', new Option('No specific job', ''), ...state.jobs.map(item => new Option(item.title, item.id)));
+  job.value = profile ? profile.jobId : state.intakeJob;
   const error = el('p', 'form-error');
   error.setAttribute('role', 'alert');
   const form = el('form', '',
     field('Candidate name', name),
+    field('Assigned job', job, 'An unassigned resume can be considered for every job.'),
     field('Resume text', content),
     error,
     el('div', 'form-actions',
@@ -669,12 +710,13 @@ function resumeEditor(profile) {
     }
     const text = content.value.trim();
     const format = profile && profile.text === text ? profile.format : profile ? 'Edited text' : 'Pasted text';
-    const updated = sourceProfile(name.value.trim(), text, format, profile?.id);
+    const updated = sourceProfile(name.value.trim(), text, format, job.value, profile?.id);
     if (profile) state.profiles = state.profiles.map(item => item.id === profile.id ? updated : item);
     else state.profiles.push(updated);
+    if (profile && profile.text !== text) invalidateVerification(null, profile.id);
     $('dialog').close();
     changed();
-    notify(profile ? 'Resume updated. Run screening to refresh the scores.' : 'Candidate profile extracted.');
+    notify(profile ? 'Resume and rankings updated.' : 'Candidate added.');
   });
   showDialog(profile ? 'Edit resume' : 'Paste resume text', form);
 }
@@ -758,8 +800,16 @@ function jobEditor(job) {
       message.textContent = 'Add at least one criterion before saving.';
       return;
     }
-    if (job) state.jobs = state.jobs.map(j => j.id === job.id ? next : j);
-    else state.jobs.push(next);
+    if (job) {
+      state.jobs = state.jobs.map(j => j.id === job.id ? next : j);
+      const fields = ['requiredSkills', 'preferredSkills', 'years', 'degree', 'certificates'];
+      if (fields.some(key => JSON.stringify(job[key]) !== JSON.stringify(next[key]))) invalidateVerification(job.id, null);
+    } else {
+      state.jobs.push(next);
+      state.selected = next.id;
+      state.intakeJob = next.id;
+      state.group = 'all';
+    }
     $('dialog').close();
     changed();
     notify('Job criteria saved.');
@@ -782,6 +832,7 @@ function displayName(file, content) {
 async function upload(files) {
   if (!files.length || state.reading) return;
   const epoch = state.epoch;
+  const jobId = state.intakeJob;
   state.reading = true;
   render();
   const profiles = [], errors = [];
@@ -789,13 +840,14 @@ async function upload(files) {
     if (epoch !== state.epoch) return;
     try {
       const content = await readDocument(file);
-      profiles.push(sourceProfile(displayName(file, content), content, file.name.split('.').at(-1).toUpperCase()));
+      profiles.push(sourceProfile(displayName(file, content), content, file.name.split('.').at(-1).toUpperCase(), jobId));
     } catch (error) {
       errors.push(file.name + ' \u00b7 ' + error.message);
     }
   }
   if (epoch !== state.epoch) return;
   state.reading = false;
+  if (!state.jobs.some(job => job.id === jobId)) for (const profile of profiles) profile.jobId = '';
   if (profiles.length) { state.profiles.push(...profiles); changed(); } else render();
   if (errors.length) {
     const body = [el('p', 'help', profiles.length ? quantity(profiles.length, 'resume') + ' extracted.' : 'No profiles were added.'), lines(errors, '')];
@@ -806,8 +858,17 @@ async function upload(files) {
 
 // ── Core actions ──────────────────────────────────────────────────────────────
 function recalculate() {
-  state.results = analyze(state.profiles, state.jobs);
+  state.results = state.profiles.length && state.jobs.length ? analyze(state.profiles, state.jobs) : null;
   render();
+}
+
+function invalidateVerification(jobId, profileId) {
+  for (const [key, review] of state.reviews) {
+    const [job, profile] = key.split('/');
+    if ((jobId ? jobId === job : profileId === profile) && review.status === 'reviewed') {
+      state.reviews.set(key, {...review, status: 'todo'});
+    }
+  }
 }
 
 function clearWorkspace() {
@@ -815,6 +876,8 @@ function clearWorkspace() {
   state.profiles = [];
   state.jobs = [];
   state.selected = '';
+  state.intakeJob = '';
+  state.group = 'all';
   state.reading = false;
   resetReviews();
   changed();
@@ -827,24 +890,56 @@ function resetReviews() {
   state.statusFilter = '';
 }
 
-function loadSample() {
-  state.epoch++;
-  resetReviews();
-  state.profiles = sampleResumes.map(function([name, text]) { return sourceProfile(name, text, 'Sample'); });
-  state.jobs = sampleJobs.map(function([title, text]) { return sourceJob(title, text); });
-  state.sample = true;
-  state.reading = false;
-  state.selected = state.jobs[0].id;
+async function initializeWorkspace() {
+  try {
+    const store = await openWorkspace();
+    const saved = await store.load();
+    if (saved.data) {
+      const {profiles, jobs, reviews} = saved.data;
+      const restored = profiles.map(({name, text, format, jobId, id}) => sourceProfile(name, text, format, jobId, id));
+      const reviewMap = new Map(reviews);
+      state.profiles = restored;
+      state.jobs = jobs;
+      state.reviews = reviewMap;
+      state.nextId = Math.max(0, ...restored.concat(jobs).map(item => Number(item.id)));
+    }
+    revision = saved.revision;
+    storage = store;
+    $('save-status').textContent = store.label;
+  } catch {
+    $('save-status').textContent = 'Saving unavailable. Changes last until you close this page.';
+  }
+  $('main').inert = false;
   recalculate();
+}
+
+function saveWorkspace() {
+  if (!storage) return Promise.resolve(false);
+  const data = structuredClone({
+    profiles: state.profiles.map(({name, text, format, jobId, id}) => ({name, text, format, jobId, id})),
+    jobs: state.jobs, reviews: [...state.reviews]
+  });
+  $('save-status').textContent = 'Saving…';
+  pendingSave = pendingSave.then(async () => {
+    try {
+      revision = await storage.save(data, revision);
+      $('save-status').textContent = storage.label;
+      return true;
+    } catch (error) {
+      $('save-status').textContent = 'Changes not saved. ' + (error.message || 'Check storage availability.');
+      return false;
+    }
+  });
+  return pendingSave;
 }
 
 function exportRanking() {
   const pair = selectedPair();
   if (!pair) return;
-  const rows = [['Job', 'Rank', 'Candidate', 'Match score (%)', 'Required skills found', 'Required skills missing', 'Experience (months)', 'Review status']];
+  const rows = [['Job', 'Rank', 'Candidate', 'Match score (%)', 'Requirement group', 'Required skills found', 'Required skills missing', 'Experience (months)', 'Verification status']];
   for (const item of rankCandidates(pair.candidates)) {
     if (item.score === null) continue;
-    rows.push([pair.job.title, item.rank, item.profile.name, Math.round(item.score),
+    rows.push([pair.job.title, item.rank, item.profile.name, Math.round(item.score), rankingGroups[requirementsGroup(item)],
       item.matched.required.join('; '), item.missing.required.join('; '),
       item.profile.experience.months ?? '',
       reviewStatuses[getReview(pair.job, item.profile).status]]);
@@ -872,10 +967,13 @@ $('dialog').addEventListener('click', function(e) { if (e.target === $('dialog')
 $('paste').addEventListener('click', () => resumeEditor());
 $('add-candidate-view').addEventListener('click', () => resumeEditor());
 $('add-job').addEventListener('click', function() { jobEditor(); });
+$('start-job').addEventListener('click', function() { jobEditor(); });
 $('add-job-view').addEventListener('click', function() { jobEditor(); });
+$('intake-role').addEventListener('change', event => { state.intakeJob = event.target.value; });
 
 $('role-select').addEventListener('change', function(event) {
   state.selected = event.target.value;
+  state.group = 'all';
   state.comparison.clear();
   renderRanking();
 });
@@ -890,25 +988,17 @@ $('status-filter').addEventListener('change', function(event) {
 
 $('compare').addEventListener('click', showComparison);
 $('run').addEventListener('click', function() {
-  recalculate();
-  notify('Screening done! Rankings and recommendations updated.');
+  $('results-title').focus();
+  $('results-title').scrollIntoView({block: 'start'});
 });
 $('export').addEventListener('click', exportRanking);
 $('export').title = 'Export rankings for the selected job as CSV';
 
 $('reset').addEventListener('click', function() {
   if (!state.profiles.length && !state.jobs.length && !state.reading) return;
-  confirmAction('Reset workspace?',
-    'This clears all resumes, jobs, scores, and review notes from this session.',
-    'Reset workspace', clearWorkspace);
-});
-
-$('demo').addEventListener('click', function() {
-  if (state.profiles.length || state.jobs.length)
-    confirmAction('Replace workspace with sample data?',
-      'This replaces your current resumes, jobs, scores, and review notes with fictional examples.',
-      'Load sample data', loadSample);
-  else loadSample();
+  confirmAction('Clear workspace?',
+    'This deletes the saved resumes, jobs, and review notes for this workspace.',
+    'Clear workspace', clearWorkspace);
 });
 
 const dropzone = $('dropzone');
@@ -930,4 +1020,4 @@ $('files').addEventListener('change', function(event) {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-loadSample();
+void initializeWorkspace();

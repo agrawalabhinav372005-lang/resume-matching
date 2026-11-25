@@ -246,16 +246,31 @@ export function scoreProfile(profile, job) {
 }
 
 export function analyze(profiles, jobs) {
-  const pairs = jobs.map(job => ({
-    job,
-    candidates: profiles.map(profile => ({profile, ...scoreProfile(profile, job)})).sort(compareScores)
-  }));
-  const recommendations = profiles.map(profile => ({
-    profile,
-    jobs: pairs.flatMap(({job, candidates}) => candidates.filter(result => result.profile.id === profile.id).map(result => ({job, ...result})))
-      .filter(result => result.score !== null).sort(compareScores)
-  }));
+  const pairs = jobs.map(job => ({job, candidates: []}));
+  const recommendations = profiles.map(profile => {
+    const matches = pairs.map(({job, candidates}) => {
+      const match = {profile, ...scoreProfile(profile, job)};
+      if (!profile.jobId || profile.jobId === job.id) candidates.push(match);
+      return {job, ...match};
+    });
+    return {profile, jobs: matches.filter(match => match.score !== null).sort(compareScores)};
+  });
+  for (const pair of pairs) pair.candidates.sort(compareScores);
   return {pairs, recommendations};
+}
+
+export function requirementsGroup(result) {
+  return ['required', 'experience', 'education', 'qualifications'].some(key =>
+    result.fraction[key] !== null && result.fraction[key] < 1
+  ) ? 'gaps' : 'ready';
+}
+
+export function skillEvidence(profile, skills) {
+  return skills.map(skill => {
+    const terms = skillPatterns.get(canonicalSkills.get(fold(skill))) ?? [fold(skill)];
+    const line = profile.evidenceLines.find(candidate => evidence(candidate, terms));
+    return {skill, line: line?.slice(0, 360)};
+  }).filter(item => item.line);
 }
 
 function compareScores(a, b) {
